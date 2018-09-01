@@ -10,8 +10,13 @@ import (
 	haproxy "github.com/bcicen/go-haproxy"
 )
 
+var prompt = "\ncli > "
 var haproxyAddr = "unix://dev/haproxy/run/haproxy.sock"
-var showCommand = regexp.MustCompile(`^show\s(\w+)\s(\w+)$`)
+var helpCommand = regexp.MustCompile(`^help$`)
+var noopCommand = regexp.MustCompile(`^(?:noop.*)?$`)
+var showstatsCommand = regexp.MustCompile(`^show\s?stats$`)
+var showinfoCommand = regexp.MustCompile(`^show\s?info$`)
+var showCommand = regexp.MustCompile(`^show\s(\w+)\s?(\w+)?\s?(\w+)?$`)
 
 func main() {
 	input := bufio.NewReader(os.Stdin)
@@ -19,18 +24,13 @@ func main() {
 	scanner.Split(cliSplitFunc)
 	printHeader()
 	for scanner.Scan() {
-		switch text := strings.TrimSuffix(scanner.Text(), "\n"); text {
-		case "help":
-			fmt.Printf("here's your help: %s", text)
-		case "noop":
-			fmt.Printf("Here's noop: %s", text)
-		case "showinfo":
-			text, err := showinfo()
-			if err != nil {
-				fmt.Println("An error occurred: " + err.Error())
-			}
-			fmt.Printf("%s", text)
-		case "showstats":
+		command := strings.TrimSuffix(scanner.Text(), "\n")
+		switch {
+		case helpCommand.MatchString(command):
+			fmt.Println(showHelp())
+		case noopCommand.MatchString(command):
+			fmt.Printf("noop")
+		case showstatsCommand.MatchString(command):
 			stats, err := showstats()
 			if err != nil {
 				fmt.Println("An error occurred: " + err.Error())
@@ -38,21 +38,32 @@ func main() {
 			for _, i := range stats {
 				fmt.Printf("%s %s: %s\n", i.PxName, i.SvName, i.Status)
 			}
-		case "show":
-			stats, err := show(text)
-			fmt.Printf("showing: %s\n", text)
+		case showinfoCommand.MatchString(command):
+			results, err := showinfo()
 			if err != nil {
 				fmt.Println("An error occurred: " + err.Error())
 			}
-			for _, i := range stats {
-				fmt.Printf("%s %s: %s\n", i.PxName, i.SvName, i.Status)
+			fmt.Printf("%s", results)
+		case showCommand.MatchString(command):
+			stats, err := showstats()
+			if err != nil {
+				fmt.Println("An error occurred: " + err.Error())
 			}
-		case "": // Print nothing when no input recieved
+			fmt.Println(showParse(command, stats))
 		default:
-			fmt.Printf("wtf, %s", text)
+			fmt.Printf("wtf, %s", command)
 		}
-		fmt.Print("\ncli > ")
+		fmt.Print(prompt)
 	}
+}
+
+func showParse(command string, stats []*haproxy.Stat) string {
+	result := ""
+	for _, i := range stats {
+
+		fmt.Printf("%s %s: %s\n", i.PxName, i.SvName, i.Status)
+	}
+	return result
 }
 
 func show(command string) ([]*haproxy.Stat, error) {
@@ -65,6 +76,10 @@ func show(command string) ([]*haproxy.Stat, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func showHelp() string {
+	return "Good luck!"
 }
 
 func showinfo() (string, error) {
