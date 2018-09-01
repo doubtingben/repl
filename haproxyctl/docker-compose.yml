@@ -1,0 +1,16 @@
+version: '2'
+
+services:
+  haproxy:
+    image: haproxy:1.7
+    ports:
+      - "80:80"
+      - "9090:9090"
+    volumes:
+      - ./dev/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./dev/haproxy/run:/run/haproxy/
+    depends_on:
+      - nginx1
+
+  nginx1:
+    image: nginx

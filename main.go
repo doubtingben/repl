@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -12,8 +13,15 @@ func main() {
 	scanner.Split(cliSplitFunc)
 	printHeader()
 	for scanner.Scan() {
-		fmt.Print(scanner.Text())
-		fmt.Print("cli > ")
+		switch text := strings.TrimSuffix(scanner.Text(), "\n"); text {
+		case "help":
+			fmt.Printf("here's your help: %s", text)
+		case "noop":
+			fmt.Printf("Here's noop: %s", text)
+		default:
+			fmt.Printf("wtf, %s", text)
+		}
+		fmt.Print("\ncli > ")
 	}
 
 }
